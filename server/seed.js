@@ -1,0 +1,18 @@
+export function seedProjects(db) {
+  db.prepare('INSERT INTO projects VALUES (?, ?, ?, ?, ?, ?, ?)').run('when-you-look-me-in-the-eyes','When You Look Me in the Eyes','Jonas Brothers','138','G','Medium','https://drive.google.com/');
+  const members = [['m-antonio','Antonio','#1f5fbf'],['m-gio','Gio','#7e22ce'],['m-franz','Franz','#b45309'],['m-pablo','Pablo','#7c3aed'],['m-chyle','Chyle','#be123c']];
+  members.forEach(m => db.prepare('INSERT INTO members VALUES (?, ?, ?, ?)').run(m[0], 'when-you-look-me-in-the-eyes', m[1], m[2]));
+  const refs = [['ref-1','Official Music Video','Use for structure and vocal phrasing.','https://youtube.com/'],['ref-2','Live Acoustic Reference','Use for dynamics and softer verse energy.','https://youtube.com/'],['ref-3','Band Cover Peg','Use for instrument balance.','https://youtube.com/']];
+  refs.forEach(r => db.prepare('INSERT INTO references_tracks VALUES (?, ?, ?, ?, ?)').run(r[0], 'when-you-look-me-in-the-eyes', r[1], r[2], r[3]));
+  const roles = [['role-1','Lead Vocals','m-antonio','2026-05-02','Not started','Use main take 03.'],['role-2','Drums','m-gio','2026-04-29','Submitted','Need clap sync before first chorus.'],['role-3','Lead Guitar','m-franz','2026-05-01','Needs revision','Timing slightly late during chorus.'],['role-4','Bass','m-pablo','2026-05-03','Not started','Follow root notes for verse.'],['role-5','Triangle','m-chyle','2026-04-10','Not started','']];
+  roles.forEach(r => db.prepare('INSERT INTO roles VALUES (?, ?, ?, ?, ?, ?, ?)').run(r[0], 'when-you-look-me-in-the-eyes', r[1], r[2], r[3], r[4], r[5]));
+  db.prepare('INSERT INTO stem_links VALUES (?, ?, ?, ?, ?, ?, ?)').run('stem-1','when-you-look-me-in-the-eyes','role-1','m-antonio','Lead vocal stem v1','https://drive.google.com/','Approved');
+  db.prepare('INSERT INTO stem_links VALUES (?, ?, ?, ?, ?, ?, ?)').run('stem-2','when-you-look-me-in-the-eyes','role-3','m-franz','Lead guitar stem v2','https://drive.google.com/','Needs revision');
+  db.prepare('INSERT INTO video_links VALUES (?, ?, ?, ?, ?, ?, ?)').run('vid-1','when-you-look-me-in-the-eyes','role-1','m-antonio','Lead vocal camera take','https://drive.google.com/','Approved');
+  db.prepare('INSERT INTO video_links VALUES (?, ?, ?, ?, ?, ?, ?)').run('vid-2','when-you-look-me-in-the-eyes','role-3','m-franz','Lead guitar video take','https://drive.google.com/','Needs reshoot');
+  db.prepare('INSERT INTO latest_mixes VALUES (?, ?, ?, ?, ?, ?, ?)').run('mix-1','when-you-look-me-in-the-eyes','Rough Mix v1','https://drive.google.com/','For review','First full-band balance check.','2026-04-24');
+  db.prepare('INSERT INTO latest_mixes VALUES (?, ?, ?, ?, ?, ?, ?)').run('mix-2','when-you-look-me-in-the-eyes','Latest Mix v2','https://drive.google.com/','Latest','Cleaner vocal level and guitar timing fixes.','2026-04-25');
+  const sections = [['sec-1','Intro','Easy','Soft entry. Piano and clean guitar only.','Piano, Guitar',0],['sec-2','Verse','Medium','Keep drums minimal. Vocals should stay intimate.','Vocals, Guitar, Bass',1],['sec-3','Chorus','Hard','Full band. Add harmonies on last line.','All members',2],['sec-4','Bridge','Medium','Drop to pads then build back up.','Vocals, Keys, Drums',3]];
+  sections.forEach(s => db.prepare('INSERT INTO sections VALUES (?, ?, ?, ?, ?, ?, ?)').run(s[0], 'when-you-look-me-in-the-eyes', s[1], s[2], s[3], s[4], s[5]));
+  db.prepare('INSERT INTO feedback VALUES (?, ?, ?, ?, ?, ?, ?)').run('fb-1','when-you-look-me-in-the-eyes','Mixer','m-franz','Lead Guitar','Guitar timing is off at the chorus. Please submit a cleaner take.','24/04/2026, 05:43:13');
+}
