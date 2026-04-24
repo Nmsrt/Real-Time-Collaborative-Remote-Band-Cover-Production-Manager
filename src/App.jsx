@@ -134,6 +134,10 @@ export default function App() {
               setSelectedId(id);
               setPage('project');
             }}
+            openEdit={(id) => {
+              setSelectedId(id);
+              setModal({ type: 'projectEdit' });
+            }}
             openCreate={() => setModal({ type: 'project' })}
             deleteProject={deleteProject}
           />

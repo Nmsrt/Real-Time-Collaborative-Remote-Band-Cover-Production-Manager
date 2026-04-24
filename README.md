@@ -54,8 +54,6 @@ Keep the terminal running while using the app. Press `Ctrl + C` to stop both the
 - Track mix history without leaving the workspace
 
 ### Edit / Update Functionality
-
-- Edit project details such as title, artist, BPM, key, and difficulty
 - Update member names and colors
 - Edit references, roles, section notes, links, and feedback
 - Improve project maintenance after initial creation
@@ -71,7 +69,6 @@ Keep the terminal running while using the app. Press `Ctrl + C` to stop both the
 
 - Cleaner project dashboard
 - Better responsive layout for smaller screens
-- Improved tables for easier tracking
 - More polished cards, buttons, modals, and empty states
 - Stronger visual hierarchy for active tasks and late submissions
 

@@ -1,13 +1,9 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
-import { uid } from '../utils/projectStorage';
-
-const KEY_OPTIONS = ['C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F', 'F#', 'Gb', 'G', 'G#', 'Ab', 'A', 'A#', 'Bb', 'B'];
-const DIFFICULTY_OPTIONS = ['Easy', 'Medium', 'Hard'];
+import { uid } from './src/utils/projectStorage';
 
 const blank = {
   project: { title: '', artist: '', bpm: '', key: '', difficulty: 'Medium', driveUrl: '' },
-  projectEdit: { title: '', artist: '', bpm: '', key: '', difficulty: 'Medium', driveUrl: '' },
   member: { name: '', color: '#2458ad' },
   reference: { title: '', note: '', url: '' },
   role: { role: '', memberId: '', deadline: '', status: 'Not started', note: '' },
@@ -20,7 +16,6 @@ const blank = {
 
 const titles = {
   project: 'Create Project',
-  projectEdit: 'Edit Project Details',
   member: 'Add Member',
   reference: 'Add Reference Track',
   role: 'Add Role',
@@ -33,18 +28,7 @@ const titles = {
 
 export default function ModalController({ modal, close, createProject, project, updateProject }) {
   const initial = { ...blank[modal.type] };
-
-  if (modal.type === 'projectEdit' && project) {
-    initial.title = project.title || '';
-    initial.artist = project.artist || '';
-    initial.bpm = project.bpm || '';
-    initial.key = project.key || '';
-    initial.difficulty = project.difficulty || 'Medium';
-    initial.driveUrl = project.driveUrl || '';
-  }
-
   if (modal.roleId && (modal.type === 'stemLink' || modal.type === 'videoLink')) initial.roleId = modal.roleId;
-
   const [form, setForm] = useState(initial);
 
   function set(field, value) {
@@ -60,19 +44,6 @@ export default function ModalController({ modal, close, createProject, project, 
     e.preventDefault();
     if (modal.type === 'project') return createProject(form);
     if (!project) return;
-
-    if (modal.type === 'projectEdit') {
-      updateProject(project.id, (p) => ({
-        ...p,
-        title: form.title,
-        artist: form.artist || 'Artist TBD',
-        bpm: form.bpm || '---',
-        key: form.key || '---',
-        difficulty: form.difficulty || 'Medium',
-        driveUrl: form.driveUrl || ''
-      }));
-      return close();
-    }
 
     if (modal.type === 'member') return addToProject('members', { id: uid('member'), ...form });
     if (modal.type === 'reference') return addToProject('references', { id: uid('ref'), ...form });
@@ -95,12 +66,12 @@ export default function ModalController({ modal, close, createProject, project, 
           <button type="button" onClick={close}><X size={18}/></button>
         </div>
 
-        {(modal.type === 'project' || modal.type === 'projectEdit') && <div className="form-grid">
+        {modal.type === 'project' && <div className="form-grid">
           <Field label="Project title" value={form.title} onChange={(v) => set('title', v)} required />
           <Field label="Artist" value={form.artist} onChange={(v) => set('artist', v)} />
           <Field label="BPM" value={form.bpm} onChange={(v) => set('bpm', v)} />
-          <Select label="Key" value={form.key} onChange={(v) => set('key', v)} options={KEY_OPTIONS} placeholder="Select key" />
-          <Select label="Difficulty" value={form.difficulty} onChange={(v) => set('difficulty', v)} options={DIFFICULTY_OPTIONS} />
+          <Field label="Key" value={form.key} onChange={(v) => set('key', v)} />
+          <Select label="Difficulty" value={form.difficulty} onChange={(v) => set('difficulty', v)} options={['Easy', 'Medium', 'Hard']} />
           <Field label="Google Drive URL" value={form.driveUrl} onChange={(v) => set('driveUrl', v)} />
         </div>}
 
@@ -141,7 +112,7 @@ export default function ModalController({ modal, close, createProject, project, 
 
         {modal.type === 'section' && <div className="form-grid">
           <Field label="Section label" value={form.label} onChange={(v) => set('label', v)} required />
-          <Select label="Difficulty" value={form.difficulty} onChange={(v) => set('difficulty', v)} options={DIFFICULTY_OPTIONS} />
+          <Select label="Difficulty" value={form.difficulty} onChange={(v) => set('difficulty', v)} options={['Easy', 'Medium', 'Hard']} />
           <Field label="Members involved" value={form.members} onChange={(v) => set('members', v)} />
           <TextArea label="Arrangement note" value={form.note} onChange={(v) => set('note', v)} />
         </div>}

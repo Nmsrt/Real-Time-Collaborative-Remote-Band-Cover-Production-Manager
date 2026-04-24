@@ -602,3 +602,183 @@ textarea { min-height: 100px; resize: vertical; }
 .app-shell.light-theme th {
   color:#6b6b6b;
 }
+
+.dropdown-menu {
+  position: relative;
+  display: inline-block;
+}
+
+.icon-only {
+  min-width: 44px;
+  justify-content: center;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  min-width: 150px;
+  padding: 8px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  z-index: 10;
+}
+
+.dropdown-menu:hover .dropdown-content {
+  display: grid;
+  gap: 6px;
+}
+
+.dropdown-content button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 10px 12px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 900;
+  cursor: pointer;
+  text-align: left;
+}
+
+.dropdown-content button:hover {
+  background: var(--surface-soft);
+}
+
+.dropdown-content .danger-option {
+  color: #b91c1c;
+}
+
+.reference-card {
+  position: relative;
+  padding: 16px;
+}
+
+/* top-right X button */
+.ref-delete {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+
+  width: 22px;
+  height: 22px;
+
+  border: 1px solid var(--line);
+  border-radius: 999px;
+
+  background: white;
+  color: #9f2a2a;
+
+  display: grid;
+  place-items: center;
+
+  cursor: pointer;
+  padding: 0;
+}
+
+/* subtle hover */
+.ref-delete:hover {
+  background: #fff0f0;
+}
+
+.drive-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+/* base */
+.status-select {
+  border-radius: 12px;
+  font-weight: 900;
+}
+
+/* ❌ Not started */
+.status-select.not-started {
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  color: #6b7280;
+}
+
+/* 🟡 In progress */
+.status-select.in-progress {
+  background: #fff7ed;
+  border: 2px solid #fdba74;
+  color: #c2410c;
+}
+
+/* ✅ Submitted */
+.status-select.submitted {
+  background: #ecfdf5;
+  border: 2px solid #86efac;
+  color: #166534;
+}
+
+/* 🔁 Needs revision */
+.status-select.needs-revision {
+  background: #fef2f2;
+  border: 2px solid #fca5a5;
+  color: #991b1b;
+}
+
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.kebab-btn {
+  border: 1px solid var(--line);
+  background: white;
+  border-radius: 12px;
+  padding: 8px;
+  cursor: pointer;
+}
+
+/* hidden by default */
+.dropdown-content {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 170px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  display: none;
+  flex-direction: column;
+  z-index: 10;
+}
+
+/* show on hover */
+.dropdown:hover .dropdown-content {
+  display: flex;
+}
+
+/* buttons */
+.dropdown-content button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  font-weight: 800;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.dropdown-content button:hover {
+  background: #f5f3ef;
+}
+
+/* danger */
+.danger-option {
+  color: #b91c1c;
+}
+

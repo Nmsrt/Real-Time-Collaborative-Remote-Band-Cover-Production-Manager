@@ -1,7 +1,7 @@
 import React from 'react';
-import { Plus, PlayCircle, Trash2, Pencil } from 'lucide-react';
+import { Plus, PlayCircle, Trash2 } from 'lucide-react';
 
-export default function ProjectLibrary({ projects, openProject, openCreate, openEdit, deleteProject }) {
+export default function ProjectLibrary({ projects, openProject, openCreate, deleteProject }) {
   return (
     <section>
       <div className="page-header">
@@ -34,19 +34,7 @@ export default function ProjectLibrary({ projects, openProject, openCreate, open
                   <button className="secondary-btn disabled" type="button" disabled><PlayCircle size={16}/> No Mix Yet</button>
                 )}
                 <button className="primary-btn" onClick={() => openProject(project.id)}>Open Workspace</button>
-                <div className="dropdown-menu">
-                  <button className="secondary-btn icon-only" type="button">...</button>
-
-                  <div className="dropdown-content">
-                    <button onClick={() => openEdit(project.id)}>
-                      <Pencil size={16}/> Edit
-                    </button>
-
-                    <button className="danger-option" onClick={() => deleteProject(project.id)}>
-                      <Trash2 size={16}/> Delete
-                    </button>
-                  </div>
-                </div>
+                <button className="danger-btn" onClick={() => deleteProject(project.id)} title="Delete project"><Trash2 size={16}/> Delete</button>
               </div>
             </article>
           );
