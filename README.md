@@ -74,3 +74,11 @@ Keep the terminal running while using the app. Press `Ctrl + C` to stop both the
 - Improved tables for easier tracking
 - More polished cards, buttons, modals, and empty states
 - Stronger visual hierarchy for active tasks and late submissions
+
+### Activity Log
+
+- Track actions made inside each project
+- Show what was added, edited, or removed
+- Record changes to roles, members, stems, videos, references, mix drafts, sections, and feedback
+- Display timestamps for every project update
+- Help members review recent project activity and avoid confusion

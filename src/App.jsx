@@ -6,6 +6,7 @@ import ProjectWorkspace from './pages/ProjectWorkspace';
 import ModalController from './modals/ModalController';
 import { createProjectApi, deleteProjectApi, fetchProjects, saveProjectApi } from './api/projectsApi';
 
+
 export default function App() {
   const [projects, setProjects] = useState([]);
   const [page, setPage] = useState('library');
@@ -14,10 +15,15 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
 
   useEffect(() => {
     loadProjectsFromApi();
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('theme', theme);
+  }, [theme]);
 
   async function loadProjectsFromApi() {
     try {
@@ -100,8 +106,15 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${theme}-theme`}>
       <Sidebar page={page} setPage={setPage} openCreate={() => setModal({ type: 'project' })} />
+      <button
+        className="theme-toggle-sidebar"
+        type="button"
+        onClick={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
+      >
+        {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+      </button>
       <main className="main-area">
         {error && <div className="status-banner error">{error}</div>}
         {saving && <div className="status-banner">Saving to SQLite database...</div>}

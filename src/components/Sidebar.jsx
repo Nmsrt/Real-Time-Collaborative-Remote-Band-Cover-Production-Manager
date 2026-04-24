@@ -10,7 +10,7 @@ export default function Sidebar({ page, setPage, openCreate }) {
         <button className={page === 'library' || page === 'project' ? 'active' : ''} onClick={() => setPage('library')}><Library size={16} /> Project Library</button>
         <button onClick={openCreate}><Plus size={16} /> Create Project</button>
       </nav>
-      <div className="sidebar-note">Wide, clean workspace for stems, videos, section notes, references, and review feedback.</div>
+      
     </aside>
   );
 }
