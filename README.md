@@ -1,4 +1,4 @@
-# CoverFlow Remote Manager
+# Collaborative Remote Band Cover Manager
 
 CoverFlow is a real-time remote band cover management platform for organizing online music collaborations from first reference track to final mix.
 
