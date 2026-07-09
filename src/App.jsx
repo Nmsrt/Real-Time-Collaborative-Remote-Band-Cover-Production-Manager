@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Menu, Music, Sun, Moon } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import HomePage from './pages/HomePage';
 import ProjectLibrary from './pages/ProjectLibrary';
@@ -24,9 +25,31 @@ export default function App() {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
+  const [navOpen, setNavOpen] = useState(false);
+
+  const toggleTheme = () => setTheme((current) => (current === 'dark' ? 'light' : 'dark'));
+  const closeNav = () => setNavOpen(false);
 
   useEffect(() => {
     loadProjectsFromApi();
+  }, []);
+
+  // Lock background scroll while the mobile navigation drawer is open.
+  useEffect(() => {
+    document.body.style.overflow = navOpen ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [navOpen]);
+
+  // Close the drawer when the viewport grows to the desktop layout.
+  useEffect(() => {
+    const desktop = window.matchMedia('(min-width: 821px)');
+    const handleChange = (event) => {
+      if (event.matches) setNavOpen(false);
+    };
+    desktop.addEventListener('change', handleChange);
+    return () => desktop.removeEventListener('change', handleChange);
   }, []);
 
   useEffect(() => {
@@ -122,21 +145,56 @@ export default function App() {
 
   return (
     <div className={`app-shell ${theme}-theme`}>
-      <Sidebar page={page} setPage={setPage} openCreate={() => setModal({ type: 'project' })} />
-      <button
-        className="theme-toggle-sidebar"
-        type="button"
-        onClick={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
-      >
-        {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-      </button>
+      {/* Mobile-only top bar: hamburger opens the nav drawer; quick theme toggle. */}
+      <header className="topbar">
+        <button
+          className="icon-btn hamburger-btn"
+          type="button"
+          onClick={() => setNavOpen(true)}
+          aria-label="Open menu"
+          aria-expanded={navOpen}
+        >
+          <Menu size={22} />
+        </button>
+        <div className="topbar-brand">
+          <Music size={18} />
+          <strong>CoverFlow</strong>
+        </div>
+        <button
+          className="icon-btn"
+          type="button"
+          onClick={toggleTheme}
+          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+        </button>
+      </header>
+
+      <Sidebar
+        page={page}
+        setPage={setPage}
+        openCreate={() => setModal({ type: 'project' })}
+        open={navOpen}
+        onClose={closeNav}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+      />
+      {navOpen && <div className="sidebar-overlay" onClick={closeNav} aria-hidden="true" />}
+
       <main className="main-area">
         {error && <div className="status-banner error">{error}</div>}
-        {saving && <div className="status-banner">Saving to SQLite database...</div>}
+        {saving && (
+          <div className="status-banner">
+            <span className="spinner" aria-hidden="true" />
+            Saving to SQLite database...
+          </div>
+        )}
 
         {loading && (
           <section className="panel empty-state">
-            <h2>Loading projects...</h2>
+            <h2>
+              <span className="spinner lg" aria-hidden="true" /> Loading projects...
+            </h2>
             <p>Getting data from the Express API.</p>
           </section>
         )}

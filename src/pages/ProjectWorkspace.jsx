@@ -208,15 +208,15 @@ export default function ProjectWorkspace({
                     const statusClass = (role.status || '').replace(/\s/g, '-').toLowerCase();
                     return (
                       <tr key={role.id}>
-                        <td>
+                        <td data-label="Role">
                           <strong>{role.role}</strong>
                           <small>{role.note}</small>
                         </td>
-                        <td>
+                        <td data-label="Member">
                           <MemberBadge member={member} />
                         </td>
-                        <td>{role.deadline}</td>
-                        <td>
+                        <td data-label="Deadline">{role.deadline}</td>
+                        <td data-label="Status">
                           <select
                             className={`status-select ${statusClass}`}
                             value={role.status}
@@ -227,7 +227,7 @@ export default function ProjectWorkspace({
                             ))}
                           </select>
                         </td>
-                        <td>
+                        <td data-label="Stem Links">
                           <LinkStack
                             links={stems}
                             empty="No stem yet"
@@ -235,7 +235,7 @@ export default function ProjectWorkspace({
                             onRemove={(id) => removeItem('stemLinks', id)}
                           />
                         </td>
-                        <td>
+                        <td data-label="Video Links">
                           <LinkStack
                             links={videos}
                             empty="No video yet"
@@ -243,10 +243,11 @@ export default function ProjectWorkspace({
                             onRemove={(id) => removeItem('videoLinks', id)}
                           />
                         </td>
-                        <td>
+                        <td className="row-remove">
                           <button
                             className="ghost-btn"
                             onClick={() => removeItem('roles', role.id)}
+                            aria-label={`Remove ${role.role}`}
                           >
                             <X size={14} />
                           </button>
