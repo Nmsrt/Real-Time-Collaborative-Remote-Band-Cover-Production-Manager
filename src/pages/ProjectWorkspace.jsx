@@ -1,8 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Users,
-  RefreshCcw,
-  CalendarClock,
   ListMusic,
   Link as LinkIcon,
   Upload,
@@ -15,12 +13,19 @@ import {
   Headphones,
   Plus,
   Trash2,
-  UserPlus,
   MoreHorizontal
 } from 'lucide-react';
 
-import { Stat, Panel, MemberBadge, LinkStack } from '../components/ui';
+import { Panel, MemberBadge, LinkStack } from '../components/ui';
 import { ROLE_STATUSES } from '../constants';
+
+/** Dot color per role status — the select itself stays neutral. */
+const STATUS_DOT = {
+  'Not started': 'var(--neutral-fg)',
+  'In progress': 'var(--warning-fg)',
+  Submitted: 'var(--success-fg)',
+  'Needs revision': 'var(--error-fg)'
+};
 
 /**
  * Detailed workspace for a single project: roles, references, mixes,
@@ -36,20 +41,33 @@ import { ROLE_STATUSES } from '../constants';
 export default function ProjectWorkspace({
   project,
   updateProject,
+  removeProjectItem,
   deleteProject,
   goLibrary,
   openModal
 }) {
   const today = new Date().toISOString().slice(0, 10);
-  const lateCount = project.roles.filter(
-    (role) => role.deadline && role.deadline < today && role.status !== 'Submitted'
-  ).length;
   const submittedCount = project.roles.filter((role) => role.status === 'Submitted').length;
   const progress = project.roles.length
     ? Math.round((submittedCount / project.roles.length) * 100)
     : 0;
 
   const memberById = Object.fromEntries(project.members.map((member) => [member.id, member]));
+
+  const [activeTab, setActiveTab] = useState('assignments');
+  const tabs = [
+    { key: 'assignments', label: 'Assignments', icon: <Upload />, count: project.roles.length },
+    { key: 'references', label: 'Reference Tracks', icon: <LinkIcon />, count: project.references.length },
+    {
+      key: 'drafts',
+      label: 'Track Drafts',
+      icon: <Headphones />,
+      count: (project.latestMixes || []).length
+    },
+    { key: 'structure', label: 'Song Structure', icon: <ListMusic />, count: project.sections.length },
+    { key: 'members', label: 'Members', icon: <Users />, count: project.members.length },
+    { key: 'notes', label: 'Notes', icon: <MessageSquare />, count: project.feedback.length }
+  ];
 
   function updateRole(id, field, value) {
     updateProject(project.id, (p) => ({
@@ -59,15 +77,13 @@ export default function ProjectWorkspace({
   }
 
   /**
-   * Remove an item from one of the project's child collections.
+   * Remove an item from one of the project's child collections via a
+   * targeted single-row delete (not a full-project resave).
    * @param {keyof import('../types').Project} collection
    * @param {string} id
    */
   function removeItem(collection, id) {
-    updateProject(project.id, (p) => ({
-      ...p,
-      [collection]: p[collection].filter((item) => item.id !== id)
-    }));
+    removeProjectItem(project.id, collection, id);
   }
 
   function moveSection(index, direction) {
@@ -106,14 +122,6 @@ export default function ProjectWorkspace({
               </button>
 
               <div className="dropdown-content">
-                <button onClick={() => openModal({ type: 'reference' })}>
-                  <Plus size={16} /> Add reference
-                </button>
-
-                <button onClick={() => openModal({ type: 'member' })}>
-                  <UserPlus size={16} /> Add member
-                </button>
-
                 <button className="danger-option" onClick={() => deleteProject(project.id)}>
                   <Trash2 size={16} /> Delete project
                 </button>
@@ -136,131 +144,192 @@ export default function ProjectWorkspace({
         </div>
       </div>
 
-      <div className="stats-grid">
-        <Stat icon={<Users />} label="Roles" value={project.roles.length} sub="assigned parts" />
-        <Stat
-          icon={<RefreshCcw />}
-          label="Revisions"
-          value={project.feedback.length}
-          sub="needs attention"
-        />
-        <Stat icon={<CalendarClock />} label="Late" value={lateCount} sub="past deadline" />
+      <div className="workspace-tabs" role="tablist" aria-label="Workspace sections">
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab.key}
+            className={`tab-btn ${activeTab === tab.key ? 'active' : ''}`}
+            onClick={() => setActiveTab(tab.key)}
+          >
+            {React.cloneElement(tab.icon, { size: 15 })}
+            {tab.label}
+            <span className="tab-count">{tab.count}</span>
+          </button>
+        ))}
       </div>
 
-      <div className="workspace-grid">
-        <div className="left-column">
-          <Panel title="Reference Tracks" icon={<LinkIcon />}>
-            <div className="reference-grid">
-              {project.references.length === 0 && (
-                <p className="empty-panel">No reference tracks yet.</p>
-              )}
-              {project.references.map((ref) => (
-                <div className="reference-card" key={ref.id}>
-                  <button className="ref-delete" onClick={() => removeItem('references', ref.id)}>
-                    <X size={12} />
-                  </button>
-
-                  <a href={ref.url || '#'} target="_blank" rel="noreferrer">
-                    <strong>{ref.title}</strong>
-                    <span>{ref.note}</span>
-                  </a>
-                </div>
-              ))}
-            </div>
-          </Panel>
-
-          <Panel
-            title="Assignments"
-            icon={<Upload />}
-            action={
-              <div className="panel-actions">
-                <button className="primary-btn" onClick={() => openModal({ type: 'role' })}>
-                  <Plus size={16} /> Add Task
+      <div className="workspace-panel-slot">
+          {activeTab === 'references' && (
+            <Panel
+              title="Reference Tracks"
+              icon={<LinkIcon />}
+              action={
+                <button className="small-btn" onClick={() => openModal({ type: 'reference' })}>
+                  Add reference
                 </button>
+              }
+            >
+              <div className="reference-grid">
+                {project.references.length === 0 && (
+                  <p className="empty-panel">No reference tracks yet.</p>
+                )}
+                {project.references.map((ref) => (
+                  <div className="reference-card" key={ref.id}>
+                    <button
+                      className="ref-delete"
+                      onClick={() => removeItem('references', ref.id)}
+                    >
+                      <X size={12} />
+                    </button>
+
+                    <a href={ref.url || '#'} target="_blank" rel="noreferrer">
+                      <strong>{ref.title}</strong>
+                      <span>{ref.note}</span>
+                    </a>
+                  </div>
+                ))}
               </div>
-            }
-          >
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Role</th>
-                    <th>Member</th>
-                    <th>Deadline</th>
-                    <th>Status</th>
-                    <th>Stem Links</th>
-                    <th>Video Links</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {project.roles.length === 0 && (
+            </Panel>
+          )}
+
+          {activeTab === 'assignments' && (
+            <Panel
+              title="Assignments"
+              icon={<Upload />}
+              action={
+                <div className="panel-actions">
+                  <button className="primary-btn" onClick={() => openModal({ type: 'role' })}>
+                    <Plus size={16} /> Add Task
+                  </button>
+                </div>
+              }
+            >
+              <div className="table-wrap">
+                <table>
+                  <colgroup>
+                    <col style={{ width: '210px' }} />
+                    <col style={{ width: '170px' }} />
+                    <col style={{ width: '168px' }} />
+                    <col style={{ width: '172px' }} />
+                    <col style={{ width: '200px' }} />
+                    <col style={{ width: '200px' }} />
+                    <col style={{ width: '56px' }} />
+                  </colgroup>
+                  <thead>
                     <tr>
-                      <td colSpan="7">
-                        <small>No roles added yet.</small>
-                      </td>
+                      <th>Role</th>
+                      <th>Member</th>
+                      <th>Deadline</th>
+                      <th>Status</th>
+                      <th>Stems</th>
+                      <th>Videos</th>
+                      <th></th>
                     </tr>
-                  )}
-                  {project.roles.map((role) => {
-                    const member = memberById[role.memberId];
-                    const stems = project.stemLinks.filter((link) => link.roleId === role.id);
-                    const videos = project.videoLinks.filter((link) => link.roleId === role.id);
-                    const statusClass = (role.status || '').replace(/\s/g, '-').toLowerCase();
-                    return (
-                      <tr key={role.id}>
-                        <td data-label="Role">
-                          <strong>{role.role}</strong>
-                          <small>{role.note}</small>
-                        </td>
-                        <td data-label="Member">
-                          <MemberBadge member={member} />
-                        </td>
-                        <td data-label="Deadline">{role.deadline}</td>
-                        <td data-label="Status">
-                          <select
-                            className={`status-select ${statusClass}`}
-                            value={role.status}
-                            onChange={(e) => updateRole(role.id, 'status', e.target.value)}
-                          >
-                            {ROLE_STATUSES.map((status) => (
-                              <option key={status}>{status}</option>
-                            ))}
-                          </select>
-                        </td>
-                        <td data-label="Stem Links">
-                          <LinkStack
-                            links={stems}
-                            empty="No stem yet"
-                            onAdd={() => openModal({ type: 'stemLink', roleId: role.id })}
-                            onRemove={(id) => removeItem('stemLinks', id)}
-                          />
-                        </td>
-                        <td data-label="Video Links">
-                          <LinkStack
-                            links={videos}
-                            empty="No video yet"
-                            onAdd={() => openModal({ type: 'videoLink', roleId: role.id })}
-                            onRemove={(id) => removeItem('videoLinks', id)}
-                          />
-                        </td>
-                        <td className="row-remove">
-                          <button
-                            className="ghost-btn"
-                            onClick={() => removeItem('roles', role.id)}
-                            aria-label={`Remove ${role.role}`}
-                          >
-                            <X size={14} />
-                          </button>
+                  </thead>
+                  <tbody>
+                    {project.roles.length === 0 && (
+                      <tr>
+                        <td colSpan="7">
+                          <small>No roles added yet.</small>
                         </td>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </Panel>
+                    )}
+                    {project.roles.map((role) => {
+                      const member = memberById[role.memberId];
+                      const stems = project.stemLinks.filter((link) => link.roleId === role.id);
+                      const videos = project.videoLinks.filter((link) => link.roleId === role.id);
+                      const isLate =
+                        role.deadline && role.deadline < today && role.status !== 'Submitted';
+                      return (
+                        <tr key={role.id}>
+                          <td data-label="Role">
+                            <strong>{role.role}</strong>
+                            <small>{role.note}</small>
+                          </td>
+                          <td data-label="Member">
+                            <div
+                              className={`member-badge member-select ${member ? '' : 'muted'}`}
+                              style={{ '--member-color': member ? member.color : 'var(--muted)' }}
+                            >
+                              <i />
+                              <select
+                                value={role.memberId || ''}
+                                onChange={(e) => updateRole(role.id, 'memberId', e.target.value)}
+                                aria-label={`Reassign ${role.role}`}
+                              >
+                                <option value="">Unassigned</option>
+                                {project.members.map((m) => (
+                                  <option key={m.id} value={m.id}>
+                                    {m.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </td>
+                          <td data-label="Deadline">
+                            <input
+                              type="date"
+                              className={`deadline-input ${isLate ? 'late' : ''}`}
+                              value={role.deadline || ''}
+                              onChange={(e) => updateRole(role.id, 'deadline', e.target.value)}
+                              aria-label={`Deadline for ${role.role}${isLate ? ' (overdue)' : ''}`}
+                            />
+                          </td>
+                          <td data-label="Status">
+                            <div
+                              className="status-picker"
+                              style={{ '--status-color': STATUS_DOT[role.status] || 'var(--muted)' }}
+                            >
+                              <i />
+                              <select
+                                className="status-select"
+                                value={role.status}
+                                onChange={(e) => updateRole(role.id, 'status', e.target.value)}
+                              >
+                                {ROLE_STATUSES.map((status) => (
+                                  <option key={status}>{status}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </td>
+                          <td data-label="Stems">
+                            <LinkStack
+                              links={stems}
+                              kind="stem"
+                              onAdd={() => openModal({ type: 'stemLink', roleId: role.id })}
+                              onRemove={(id) => removeItem('stemLinks', id)}
+                            />
+                          </td>
+                          <td data-label="Videos">
+                            <LinkStack
+                              links={videos}
+                              kind="video"
+                              onAdd={() => openModal({ type: 'videoLink', roleId: role.id })}
+                              onRemove={(id) => removeItem('videoLinks', id)}
+                            />
+                          </td>
+                          <td className="row-remove">
+                            <button
+                              className="ghost-btn"
+                              onClick={() => removeItem('roles', role.id)}
+                              aria-label={`Remove ${role.role}`}
+                            >
+                              <X size={14} />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </Panel>
+          )}
 
-          <div className="dual-panel">
+          {activeTab === 'drafts' && (
             <Panel
               title="Track Drafts"
               icon={<Headphones />}
@@ -277,11 +346,7 @@ export default function ProjectWorkspace({
                 {(project.latestMixes || []).map((mix, index) => (
                   <article className="mix-row" key={mix.id}>
                     <div>
-                      <span>
-                        {index === project.latestMixes.length - 1
-                          ? 'Latest mix'
-                          : `Mix ${index + 1}`}
-                      </span>
+                      <span>{index === 0 ? 'Latest mix' : `Mix ${index + 1}`}</span>
                       <h3>{mix.label}</h3>
                       <p>{mix.note}</p>
                       <small>
@@ -303,7 +368,9 @@ export default function ProjectWorkspace({
                 ))}
               </div>
             </Panel>
+          )}
 
+          {activeTab === 'structure' && (
             <Panel
               title="Song Structure"
               icon={<ListMusic />}
@@ -340,64 +407,73 @@ export default function ProjectWorkspace({
                 ))}
               </div>
             </Panel>
-          </div>
-        </div>
+          )}
 
-        <aside className="right-column">
-          <Panel title="Members" icon={<Users />}>
-            <div className="member-list member-delete-list">
-              {project.members.length === 0 && <p className="empty-panel">No members yet.</p>}
-              {project.members.map((member) => (
-                <span className="member-delete" key={member.id}>
-                  <MemberBadge member={member} />
-                  <button
-                    className="ghost-btn tiny"
-                    onClick={() => removeItem('members', member.id)}
-                  >
-                    <X size={12} />
-                  </button>
-                </span>
-              ))}
-            </div>
-          </Panel>
-
-          <Panel
-            title="Notes"
-            icon={<MessageSquare />}
-            action={
-              <button className="small-btn" onClick={() => openModal({ type: 'feedback' })}>
-                Add Notes
-              </button>
-            }
-          >
-            <div className="timeline-list">
-              {project.feedback.length === 0 && <p className="empty-panel">No feedback yet.</p>}
-              {project.feedback.map((fb) => (
-                <article className="feedback-item" key={fb.id}>
-                  <span
-                    className="dot"
-                    style={{ background: memberById[fb.memberId]?.color || '#2563eb' }}
-                  />
-                  <div className="feedback-top">
-                    <strong>
-                      {fb.author} @{memberById[fb.memberId]?.name || 'Member'}
-                    </strong>
+          {activeTab === 'members' && (
+            <Panel
+              title="Members"
+              icon={<Users />}
+              action={
+                <button className="small-btn" onClick={() => openModal({ type: 'member' })}>
+                  Add member
+                </button>
+              }
+            >
+              <div className="member-list member-delete-list">
+                {project.members.length === 0 && <p className="empty-panel">No members yet.</p>}
+                {project.members.map((member) => (
+                  <span className="member-delete" key={member.id}>
+                    <MemberBadge member={member} />
                     <button
                       className="ghost-btn tiny"
-                      onClick={() => removeItem('feedback', fb.id)}
+                      onClick={() => removeItem('members', member.id)}
                     >
                       <X size={12} />
                     </button>
-                  </div>
-                  <p>{fb.message}</p>
-                  <small>
-                    {fb.role} · {fb.createdAt}
-                  </small>
-                </article>
-              ))}
-            </div>
-          </Panel>
-        </aside>
+                  </span>
+                ))}
+              </div>
+            </Panel>
+          )}
+
+          {activeTab === 'notes' && (
+            <Panel
+              title="Notes"
+              icon={<MessageSquare />}
+              action={
+                <button className="small-btn" onClick={() => openModal({ type: 'feedback' })}>
+                  Add Notes
+                </button>
+              }
+            >
+              <div className="timeline-list">
+                {project.feedback.length === 0 && <p className="empty-panel">No feedback yet.</p>}
+                {project.feedback.map((fb) => (
+                  <article className="feedback-item" key={fb.id}>
+                    <span
+                      className="dot"
+                      style={{ background: memberById[fb.memberId]?.color || '#2563eb' }}
+                    />
+                    <div className="feedback-top">
+                      <strong>
+                        {fb.author} @{memberById[fb.memberId]?.name || 'Member'}
+                      </strong>
+                      <button
+                        className="ghost-btn tiny"
+                        onClick={() => removeItem('feedback', fb.id)}
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                    <p>{fb.message}</p>
+                    <small>
+                      {fb.role} · {fb.createdAt}
+                    </small>
+                  </article>
+                ))}
+              </div>
+            </Panel>
+          )}
       </div>
     </section>
   );

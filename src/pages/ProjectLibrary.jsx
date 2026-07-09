@@ -1,8 +1,10 @@
-import React from 'react';
-import { Plus, PlayCircle, Trash2, Pencil } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Plus, PlayCircle, Trash2, Pencil, Search } from 'lucide-react';
 
 /**
  * Grid of project cards with open/edit/delete actions and a create entry point.
+ * Shows a search field once the library is big enough that scanning the
+ * grid by eye stops being faster than typing.
  *
  * @param {Object} props
  * @param {import('../types').Project[]} props.projects
@@ -18,6 +20,16 @@ export default function ProjectLibrary({
   openEdit,
   deleteProject
 }) {
+  const [query, setQuery] = useState('');
+
+  const filteredProjects = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return projects;
+    return projects.filter((project) =>
+      [project.title, project.artist].some((field) => field?.toLowerCase().includes(q))
+    );
+  }, [projects, query]);
+
   return (
     <section>
       <div className="page-header">
@@ -29,6 +41,20 @@ export default function ProjectLibrary({
           <Plus size={16} /> Create Project
         </button>
       </div>
+
+      {projects.length > 5 && (
+        <div className="search-field">
+          <Search size={16} />
+          <input
+            type="search"
+            placeholder="Search by title or artist..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            aria-label="Search projects"
+          />
+        </div>
+      )}
+
       <div className="project-grid">
         {projects.length === 0 && (
           <article className="project-card">
@@ -41,8 +67,16 @@ export default function ProjectLibrary({
           </article>
         )}
 
-        {projects.map((project) => {
-          const latestMix = project.latestMixes?.[project.latestMixes.length - 1];
+        {projects.length > 0 && filteredProjects.length === 0 && (
+          <article className="project-card">
+            <p className="eyebrow">No matches</p>
+            <h2>Nothing matches "{query}"</h2>
+            <p>Try a different title or artist.</p>
+          </article>
+        )}
+
+        {filteredProjects.map((project) => {
+          const latestMix = project.latestMixes?.[0];
           return (
             <article className="project-card library-card" key={project.id}>
               <div className="project-card-main">

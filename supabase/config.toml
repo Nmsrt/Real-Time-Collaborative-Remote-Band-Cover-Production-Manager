@@ -1,0 +1,6 @@
+# Supabase CLI config stub. Not required for this project (the schema is
+# applied by hand via sql/schema.sql, or by running the migration in
+# supabase/migrations/ through the Supabase SQL editor / `supabase db push`).
+# Fill in project_id and run `supabase link` if you want to manage this
+# project with the CLI (db diff, local dev stack, etc).
+project_id = "wyntwdnnnipwwxniymri"

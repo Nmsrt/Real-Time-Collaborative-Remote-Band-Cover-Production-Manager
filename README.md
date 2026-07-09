@@ -61,9 +61,10 @@
 | Layer | Technology |
 |---|---|
 | Frontend | [React](https://react.dev/) + [Vite](https://vitejs.dev/) |
-| Backend | [Node.js](https://nodejs.org/) API server |
-| Database | [SQLite](https://www.sqlite.org/) (via backend server) |
-| Dev Workflow | Concurrent frontend + backend (`dev:full`) |
+| Database | [Supabase](https://supabase.com/) (Postgres) — the client talks to it directly via `@supabase/supabase-js`, no backend server |
+| Dev Workflow | `npm run dev` (Vite only) |
+
+There is no Express/Node API layer: the React app calls Supabase directly with the anon key, and Postgres Row Level Security policies control access (see [`sql/schema.sql`](sql/schema.sql)). This app has no login system, so those policies grant open read/write — the same effective access control a public, unauthenticated API would have.
 
 ---
 
@@ -73,6 +74,7 @@
 
 - [Node.js](https://nodejs.org/) `>= 18.x`
 - [npm](https://www.npmjs.com/) `>= 9.x`
+- A [Supabase](https://supabase.com/) project (free tier is fine)
 
 ### Installation
 
@@ -87,35 +89,37 @@
    npm install
    ```
 
-3. **Start the development servers:**
+3. **Create a Supabase project**, then create the schema: open the SQL editor for your project and run the contents of [`sql/schema.sql`](sql/schema.sql). This creates all tables, their foreign keys, the `upsert_project` function used for atomic saves, and the RLS policies that let the client read/write.
+
+4. **Configure environment variables:**
    ```bash
-   npm run dev:full
+   cp .env.example .env
+   ```
+   Fill in all four values from your project's **Settings → API** page:
+   - `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` — used by the browser; safe to expose.
+   - `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` — used only by `scripts/seed.js`; never put the service-role key behind a `VITE_` prefix or in client code.
+
+5. **(Optional) Seed demo data** into an empty project:
+   ```bash
+   npm run db:seed
    ```
 
-   > ⚠️ Keep the terminal running while using the app. Press `Ctrl + C` to stop both the frontend and backend.
+6. **Start the dev server:**
+   ```bash
+   npm run dev
+   ```
 
 ---
 
 ## Usage
 
-Once running, open the following in your browser:
-
-| Service | URL |
-|---|---|
-| Frontend app | `http://localhost:5173` |
-| Backend API | `http://localhost:4000/api/projects` |
+Once running, open `http://localhost:5173` — the app talks straight to Supabase, no other process needed.
 
 ---
 
 ## Data Storage
 
-All project data is persisted in a local SQLite database managed by the backend server.
-
-| Location | Contents |
-|---|---|
-| `server/coverflow.sqlite` | Main database — projects, members, roles, stems, feedback, and more |
-
-The database file is created automatically on first run.
+All project data lives in your Supabase project's Postgres database. The React client reads/writes it directly via the anon key; Row Level Security policies (open read/write, since there's no login system) gate access instead of a backend. See [`sql/schema.sql`](sql/schema.sql) for the full table, policy, and function definitions.
 
 ---
 
@@ -123,16 +127,24 @@ The database file is created automatically on first run.
 
 ```
 Real-Time-Collaborative-Remote-Band-Cover-Production-Manager/
-├── client/                   # React + Vite frontend
-│   ├── src/
-│   │   ├── components/       # UI components
-│   │   ├── pages/            # App views/routes
-│   │   └── main.jsx          # Entry point
-│   └── index.html
-├── server/                   # Node.js backend
-│   ├── routes/               # API route handlers
-│   ├── coverflow.sqlite      # Auto-generated SQLite database
-│   └── index.js              # Server entry point
+├── index.html
+├── src/                       # React + Vite frontend
+│   ├── api/                   # Supabase client + project data access
+│   ├── components/            # Shared UI primitives and the sidebar
+│   ├── modals/                # Modal form controller
+│   ├── pages/                 # Home, Project Library, Project Workspace
+│   ├── utils/                 # Small helpers (id generation)
+│   ├── constants.js           # Shared option lists (keys, difficulty, statuses)
+│   ├── types.js                # JSDoc type definitions for the project model
+│   ├── App.jsx
+│   └── main.jsx                # Entry point
+├── sql/
+│   └── schema.sql              # Postgres schema, RLS policies, upsert_project function
+├── supabase/                  # Supabase CLI project (optional; config.toml + migrations/)
+│   ├── config.toml
+│   └── migrations/
+├── scripts/
+│   └── seed.js                 # Optional one-time demo data (npm run db:seed)
 ├── package.json
 └── README.md
 ```
@@ -170,31 +182,14 @@ Project Link: [https://github.com/Nmsrt/Real-Time-Collaborative-Remote-Band-Cove
 Available npm scripts:
 
 ```bash
-npm run dev        # Vite dev server (frontend only)
-npm run server     # Express + SQLite API (with nodemon reload)
-npm run dev:full   # Run frontend and backend together
+npm run dev        # Vite dev server
+npm run db:seed    # Seed demo data into an empty Supabase project
 npm run build      # Production build
 npm run lint       # ESLint
 npm run format     # Format all files with Prettier
 ```
 
-Project structure:
-
-```txt
-src/
-  api/         API client for the Express backend
-  components/  Shared UI primitives and the sidebar
-  modals/      Modal form controller
-  pages/       Home, Project Library, Project Workspace
-  utils/       Small helpers (id generation)
-  constants.js Shared option lists (keys, difficulty, statuses)
-  types.js     JSDoc type definitions for the project model
-server/
-  server.js    Express routes
-  db.js        SQLite access layer
-  seed.js      One-time demo data
-  schema.sql   Reference copy of the database schema
-```
+See [Project Structure](#project-structure) above for the full layout.
 
 ---
 

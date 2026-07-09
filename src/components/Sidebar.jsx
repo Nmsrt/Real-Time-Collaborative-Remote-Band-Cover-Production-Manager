@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Library, Plus, Music, X } from 'lucide-react';
+import { Library, Plus, Music, X } from 'lucide-react';
 
 /**
  * Primary navigation. On desktop it is a fixed column; on mobile it becomes an
@@ -34,7 +34,12 @@ export default function Sidebar({
   return (
     <aside className={`sidebar ${open ? 'open' : ''}`}>
       <div className="sidebar-head">
-        <div className="brand">
+        <button
+          className="brand"
+          type="button"
+          onClick={navigate(() => setPage('library'))}
+          aria-label="Go to Project Library"
+        >
           <div className="brand-mark">
             <Music size={18} />
           </div>
@@ -42,7 +47,7 @@ export default function Sidebar({
             <strong>CoverFlow</strong>
             <span>Remote Cover Manager</span>
           </div>
-        </div>
+        </button>
         <button
           className="icon-btn sidebar-close"
           type="button"
@@ -54,12 +59,6 @@ export default function Sidebar({
       </div>
 
       <nav className="nav-list">
-        <button
-          className={page === 'home' ? 'active' : ''}
-          onClick={navigate(() => setPage('home'))}
-        >
-          <Home size={16} /> Home
-        </button>
         <button
           className={isLibraryActive ? 'active' : ''}
           onClick={navigate(() => setPage('library'))}

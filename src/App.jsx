@@ -1,16 +1,22 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Menu, Music, Sun, Moon } from 'lucide-react';
 import Sidebar from './components/Sidebar';
-import HomePage from './pages/HomePage';
 import ProjectLibrary from './pages/ProjectLibrary';
 import ProjectWorkspace from './pages/ProjectWorkspace';
 import ModalController from './modals/ModalController';
 import {
   createProjectApi,
   deleteProjectApi,
+  deleteProjectItemApi,
   fetchProjects,
   saveProjectApi
 } from './api/projectsApi';
+
+// Field edits (deadline pickers, status selects, section reordering) fire
+// updateProject on every change; debouncing the network save coalesces a
+// burst of edits into a single upsert_project round trip instead of one
+// full-project resave per change.
+const SAVE_DEBOUNCE_MS = 500;
 
 /**
  * Root component. Owns project state plus the loading/saving/error/theme flags,
@@ -18,6 +24,8 @@ import {
  */
 export default function App() {
   const [projects, setProjects] = useState([]);
+  const projectsRef = useRef(projects);
+  const saveTimers = useRef({});
   const [page, setPage] = useState('library');
   const [selectedId, setSelectedId] = useState(null);
   const [modal, setModal] = useState(null);
@@ -56,6 +64,10 @@ export default function App() {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
+  useEffect(() => {
+    projectsRef.current = projects;
+  }, [projects]);
+
   async function loadProjectsFromApi() {
     try {
       setLoading(true);
@@ -73,15 +85,7 @@ export default function App() {
   const selectedProject =
     projects.find((project) => project.id === selectedId) ?? projects[0] ?? null;
 
-  async function updateProject(projectId, updater) {
-    const currentProject = projects.find((project) => project.id === projectId);
-    if (!currentProject) return;
-
-    const nextProject = updater(currentProject);
-    setProjects((current) =>
-      current.map((project) => (project.id === projectId ? nextProject : project))
-    );
-
+  async function persistProject(projectId, nextProject) {
     try {
       setSaving(true);
       setError('');
@@ -91,6 +95,54 @@ export default function App() {
       );
     } catch (err) {
       setError(err.message || 'Could not save changes. Reloading the server version.');
+      await loadProjectsFromApi();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // React may not have flushed `projects` state from a same-tick prior call
+  // yet, so track the latest optimistic state in a ref updated synchronously
+  // — otherwise a burst of edits (e.g. dragging a deadline picker) could each
+  // compute their update off a stale snapshot and clobber one another.
+  function updateProject(projectId, updater) {
+    const currentProject = projectsRef.current.find((project) => project.id === projectId);
+    if (!currentProject) return;
+
+    const nextProject = updater(currentProject);
+    projectsRef.current = projectsRef.current.map((project) =>
+      project.id === projectId ? nextProject : project
+    );
+    setProjects(projectsRef.current);
+
+    clearTimeout(saveTimers.current[projectId]);
+    saveTimers.current[projectId] = setTimeout(() => {
+      delete saveTimers.current[projectId];
+      persistProject(projectId, nextProject);
+    }, SAVE_DEBOUNCE_MS);
+  }
+
+  async function removeProjectItem(projectId, collection, itemId) {
+    const currentProject = projects.find((project) => project.id === projectId);
+    if (!currentProject) return;
+
+    const optimisticProject = {
+      ...currentProject,
+      [collection]: currentProject[collection].filter((item) => item.id !== itemId)
+    };
+    setProjects((current) =>
+      current.map((project) => (project.id === projectId ? optimisticProject : project))
+    );
+
+    try {
+      setSaving(true);
+      setError('');
+      const savedProject = await deleteProjectItemApi(projectId, collection, itemId);
+      setProjects((current) =>
+        current.map((project) => (project.id === savedProject.id ? savedProject : project))
+      );
+    } catch (err) {
+      setError(err.message || 'Could not delete item from the database.');
       await loadProjectsFromApi();
     } finally {
       setSaving(false);
@@ -156,10 +208,15 @@ export default function App() {
         >
           <Menu size={22} />
         </button>
-        <div className="topbar-brand">
+        <button
+          className="topbar-brand"
+          type="button"
+          onClick={() => setPage('library')}
+          aria-label="Go to Project Library"
+        >
           <Music size={18} />
           <strong>CoverFlow</strong>
-        </div>
+        </button>
         <button
           className="icon-btn"
           type="button"
@@ -186,7 +243,7 @@ export default function App() {
         {saving && (
           <div className="status-banner">
             <span className="spinner" aria-hidden="true" />
-            Saving to SQLite database...
+            Saving to Supabase...
           </div>
         )}
 
@@ -195,11 +252,10 @@ export default function App() {
             <h2>
               <span className="spinner lg" aria-hidden="true" /> Loading projects...
             </h2>
-            <p>Getting data from the Express API.</p>
+            <p>Getting data from Supabase.</p>
           </section>
         )}
 
-        {!loading && page === 'home' && <HomePage goLibrary={() => setPage('library')} />}
         {!loading && page === 'library' && (
           <ProjectLibrary
             projects={projects}
@@ -219,6 +275,7 @@ export default function App() {
           <ProjectWorkspace
             project={selectedProject}
             updateProject={updateProject}
+            removeProjectItem={removeProjectItem}
             deleteProject={deleteProject}
             goLibrary={() => setPage('library')}
             openModal={setModal}
