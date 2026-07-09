@@ -782,3 +782,54 @@ textarea { min-height: 100px; resize: vertical; }
   color: #b91c1c;
 }
 
+.color-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.color-picker-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  height: 44px;
+  padding: 6px 10px;
+
+  border: 1px solid #ddd;
+  border-radius: 999px; /* fully pill */
+  background: white;
+}
+
+.color-picker {
+  width: 32px;
+  height: 32px;
+  border: none;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.color-picker::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.color-picker::-webkit-color-swatch {
+  border: none;
+  border-radius: 50%;
+}
+
+.color-picker::-moz-color-swatch {
+  border: none;
+  border-radius: 50%;
+}
+
+.color-hex {
+  font-size: 13px;
+  color: #666;
+  font-family: monospace;
+}

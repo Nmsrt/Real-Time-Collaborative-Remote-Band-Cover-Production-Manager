@@ -1,4 +1,4 @@
-# CoverFlow Remote Manager
+# Band Cover Remote Manager
 
 CoverFlow is a real-time remote band cover management platform for organizing online music collaborations from first reference track to final mix.
 
@@ -36,6 +36,37 @@ server/coverflow.sqlite
 ## Notes
 
 Keep the terminal running while using the app. Press `Ctrl + C` to stop both the frontend and backend.
+
+## Development
+
+Available npm scripts:
+
+```bash
+npm run dev        # Vite dev server (frontend only)
+npm run server     # Express + SQLite API (with nodemon reload)
+npm run dev:full   # Run frontend and backend together
+npm run build      # Production build
+npm run lint       # ESLint
+npm run format     # Format all files with Prettier
+```
+
+Project structure:
+
+```txt
+src/
+  api/         API client for the Express backend
+  components/  Shared UI primitives and the sidebar
+  modals/      Modal form controller
+  pages/       Home, Project Library, Project Workspace
+  utils/       Small helpers (id generation)
+  constants.js Shared option lists (keys, difficulty, statuses)
+  types.js     JSDoc type definitions for the project model
+server/
+  server.js    Express routes
+  db.js        SQLite access layer
+  seed.js      One-time demo data
+  schema.sql   Reference copy of the database schema
+```
 
 ## Planned Features
 

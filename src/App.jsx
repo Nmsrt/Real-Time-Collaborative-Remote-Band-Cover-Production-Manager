@@ -4,9 +4,17 @@ import HomePage from './pages/HomePage';
 import ProjectLibrary from './pages/ProjectLibrary';
 import ProjectWorkspace from './pages/ProjectWorkspace';
 import ModalController from './modals/ModalController';
-import { createProjectApi, deleteProjectApi, fetchProjects, saveProjectApi } from './api/projectsApi';
+import {
+  createProjectApi,
+  deleteProjectApi,
+  fetchProjects,
+  saveProjectApi
+} from './api/projectsApi';
 
-
+/**
+ * Root component. Owns project state plus the loading/saving/error/theme flags,
+ * and coordinates the sidebar, pages, and modal controller against the API.
+ */
 export default function App() {
   const [projects, setProjects] = useState([]);
   const [page, setPage] = useState('library');
@@ -39,20 +47,25 @@ export default function App() {
     }
   }
 
-  const selectedProject = projects.find((project) => project.id === selectedId) ?? projects[0] ?? null;
+  const selectedProject =
+    projects.find((project) => project.id === selectedId) ?? projects[0] ?? null;
 
   async function updateProject(projectId, updater) {
     const currentProject = projects.find((project) => project.id === projectId);
     if (!currentProject) return;
 
     const nextProject = updater(currentProject);
-    setProjects((current) => current.map((project) => (project.id === projectId ? nextProject : project)));
+    setProjects((current) =>
+      current.map((project) => (project.id === projectId ? nextProject : project))
+    );
 
     try {
       setSaving(true);
       setError('');
       const savedProject = await saveProjectApi(nextProject);
-      setProjects((current) => current.map((project) => (project.id === savedProject.id ? savedProject : project)));
+      setProjects((current) =>
+        current.map((project) => (project.id === savedProject.id ? savedProject : project))
+      );
     } catch (err) {
       setError(err.message || 'Could not save changes. Reloading the server version.');
       await loadProjectsFromApi();
@@ -78,14 +91,16 @@ export default function App() {
   }
 
   async function deleteProject(projectId) {
-    const project = projects.find((item) => item.id === projectId);
+    const project = projects.find((candidate) => candidate.id === projectId);
     if (!project) return;
 
-    const ok = window.confirm(`Delete "${project.title}"? This removes its members, references, roles, links, mixes, sections, and feedback from the database.`);
+    const ok = window.confirm(
+      `Delete "${project.title}"? This removes its members, references, roles, links, mixes, sections, and feedback from the database.`
+    );
     if (!ok) return;
 
     const previousProjects = projects;
-    const nextProjects = projects.filter((item) => item.id !== projectId);
+    const nextProjects = projects.filter((candidate) => candidate.id !== projectId);
 
     setProjects(nextProjects);
     if (selectedId === projectId) {
@@ -155,7 +170,9 @@ export default function App() {
           <section className="panel empty-state">
             <h2>No project selected</h2>
             <p>Create a project or open one from the library.</p>
-            <button className="primary-btn" onClick={() => setModal({ type: 'project' })}>Create Project</button>
+            <button className="primary-btn" onClick={() => setModal({ type: 'project' })}>
+              Create Project
+            </button>
           </section>
         )}
       </main>

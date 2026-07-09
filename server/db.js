@@ -99,6 +99,27 @@ CREATE TABLE IF NOT EXISTS feedback (
 );
 `);
 
+/**
+ * Maps an API/JSON collection name to its backing SQL table. This is the single
+ * source of truth shared with the HTTP layer for both writes and item deletes.
+ */
+export const COLLECTION_TABLES = {
+  members: 'members',
+  references: 'references_tracks',
+  roles: 'roles',
+  stemLinks: 'stem_links',
+  videoLinks: 'video_links',
+  latestMixes: 'latest_mixes',
+  sections: 'sections',
+  feedback: 'feedback'
+};
+
+const CHILD_TABLES = Object.values(COLLECTION_TABLES);
+
+// Shared projection that aliases SQL columns back to the JSON shape the UI uses.
+const PROJECT_SELECT =
+  'SELECT id, title, artist, bpm, song_key AS key, difficulty, drive_url AS driveUrl FROM projects';
+
 function uid(prefix) {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
@@ -106,66 +127,207 @@ function uid(prefix) {
 const count = db.prepare('SELECT COUNT(*) as total FROM projects').get().total;
 if (count === 0) seedProjects(db);
 
+/** @returns {Object|undefined} The raw project row, or undefined if not found. */
+function getProjectRow(id) {
+  return db.prepare(`${PROJECT_SELECT} WHERE id = ?`).get(id);
+}
+
+/** @returns {Object[]} Every project, newest first, fully hydrated. */
 export function getProjects() {
-  const projects = db.prepare('SELECT id, title, artist, bpm, song_key as key, difficulty, drive_url as driveUrl FROM projects ORDER BY rowid DESC').all();
+  const projects = db.prepare(`${PROJECT_SELECT} ORDER BY rowid DESC`).all();
   return projects.map(hydrateProject);
 }
 
+/** @returns {Object|null} A single hydrated project, or null if not found. */
+export function getProject(id) {
+  const row = getProjectRow(id);
+  return row ? hydrateProject(row) : null;
+}
+
+/** Attach all child collections to a base project row. */
 export function hydrateProject(project) {
   return {
     ...project,
     members: db.prepare('SELECT id, name, color FROM members WHERE project_id = ?').all(project.id),
-    references: db.prepare('SELECT id, title, note, url FROM references_tracks WHERE project_id = ?').all(project.id),
-    roles: db.prepare('SELECT id, role, member_id as memberId, deadline, status, note FROM roles WHERE project_id = ?').all(project.id),
-    stemLinks: db.prepare('SELECT id, role_id as roleId, member_id as memberId, label, url, status FROM stem_links WHERE project_id = ?').all(project.id),
-    videoLinks: db.prepare('SELECT id, role_id as roleId, member_id as memberId, label, url, status FROM video_links WHERE project_id = ?').all(project.id),
-    latestMixes: db.prepare('SELECT id, label, url, status, note, created_at as createdAt FROM latest_mixes WHERE project_id = ? ORDER BY rowid ASC').all(project.id),
-    sections: db.prepare('SELECT id, label, difficulty, note, members FROM sections WHERE project_id = ? ORDER BY sort_order ASC').all(project.id),
-    feedback: db.prepare('SELECT id, author, member_id as memberId, role, message, created_at as createdAt FROM feedback WHERE project_id = ? ORDER BY rowid DESC').all(project.id)
+    references: db
+      .prepare('SELECT id, title, note, url FROM references_tracks WHERE project_id = ?')
+      .all(project.id),
+    roles: db
+      .prepare(
+        'SELECT id, role, member_id as memberId, deadline, status, note FROM roles WHERE project_id = ?'
+      )
+      .all(project.id),
+    stemLinks: db
+      .prepare(
+        'SELECT id, role_id as roleId, member_id as memberId, label, url, status FROM stem_links WHERE project_id = ?'
+      )
+      .all(project.id),
+    videoLinks: db
+      .prepare(
+        'SELECT id, role_id as roleId, member_id as memberId, label, url, status FROM video_links WHERE project_id = ?'
+      )
+      .all(project.id),
+    latestMixes: db
+      .prepare(
+        'SELECT id, label, url, status, note, created_at as createdAt FROM latest_mixes WHERE project_id = ? ORDER BY rowid ASC'
+      )
+      .all(project.id),
+    sections: db
+      .prepare(
+        'SELECT id, label, difficulty, note, members FROM sections WHERE project_id = ? ORDER BY sort_order ASC'
+      )
+      .all(project.id),
+    feedback: db
+      .prepare(
+        'SELECT id, author, member_id as memberId, role, message, created_at as createdAt FROM feedback WHERE project_id = ? ORDER BY rowid DESC'
+      )
+      .all(project.id)
   };
 }
 
+/** Insert a new project from its core details and return it hydrated. */
 export function createProject(data) {
   const id = uid('project');
-  db.prepare('INSERT INTO projects (id, title, artist, bpm, song_key, difficulty, drive_url) VALUES (?, ?, ?, ?, ?, ?, ?)')
-    .run(id, data.title, data.artist || 'Artist TBD', data.bpm || '---', data.key || '---', data.difficulty || 'Medium', data.driveUrl || '');
-  return hydrateProject(db.prepare('SELECT id, title, artist, bpm, song_key as key, difficulty, drive_url as driveUrl FROM projects WHERE id = ?').get(id));
+  db.prepare(
+    'INSERT INTO projects (id, title, artist, bpm, song_key, difficulty, drive_url) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  ).run(
+    id,
+    data.title,
+    data.artist || 'Artist TBD',
+    data.bpm || '---',
+    data.key || '---',
+    data.difficulty || 'Medium',
+    data.driveUrl || ''
+  );
+  return getProject(id);
 }
 
+/**
+ * Replace a project and all of its child collections in a single transaction,
+ * then return the freshly hydrated project.
+ */
 export function upsertProject(project) {
   const tx = db.transaction(() => {
-    db.prepare('INSERT OR REPLACE INTO projects (id, title, artist, bpm, song_key, difficulty, drive_url) VALUES (?, ?, ?, ?, ?, ?, ?)')
-      .run(project.id, project.title, project.artist, String(project.bpm), project.key, project.difficulty, project.driveUrl || '');
-    for (const table of ['members','references_tracks','roles','stem_links','video_links','latest_mixes','sections','feedback']) db.prepare(`DELETE FROM ${table} WHERE project_id = ?`).run(project.id);
+    db.prepare(
+      'INSERT OR REPLACE INTO projects (id, title, artist, bpm, song_key, difficulty, drive_url) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    ).run(
+      project.id,
+      project.title,
+      project.artist,
+      String(project.bpm),
+      project.key,
+      project.difficulty,
+      project.driveUrl || ''
+    );
+
+    for (const table of CHILD_TABLES) {
+      db.prepare(`DELETE FROM ${table} WHERE project_id = ?`).run(project.id);
+    }
+
     const insMember = db.prepare('INSERT INTO members VALUES (?, ?, ?, ?)');
-    project.members.forEach(m => insMember.run(m.id, project.id, m.name, m.color));
+    (project.members || []).forEach((m) => insMember.run(m.id, project.id, m.name, m.color));
+
     const insRef = db.prepare('INSERT INTO references_tracks VALUES (?, ?, ?, ?, ?)');
-    project.references.forEach(r => insRef.run(r.id, project.id, r.title, r.note || '', r.url || ''));
+    (project.references || []).forEach((r) =>
+      insRef.run(r.id, project.id, r.title, r.note || '', r.url || '')
+    );
+
     const insRole = db.prepare('INSERT INTO roles VALUES (?, ?, ?, ?, ?, ?, ?)');
-    project.roles.forEach(r => insRole.run(r.id, project.id, r.role, r.memberId || null, r.deadline || '', r.status || 'Not started', r.note || ''));
+    (project.roles || []).forEach((r) =>
+      insRole.run(
+        r.id,
+        project.id,
+        r.role,
+        r.memberId || null,
+        r.deadline || '',
+        r.status || 'Not started',
+        r.note || ''
+      )
+    );
+
     const insStem = db.prepare('INSERT INTO stem_links VALUES (?, ?, ?, ?, ?, ?, ?)');
-    project.stemLinks.forEach(l => insStem.run(l.id, project.id, l.roleId || null, l.memberId || null, l.label, l.url, l.status || 'Waiting'));
+    (project.stemLinks || []).forEach((l) =>
+      insStem.run(
+        l.id,
+        project.id,
+        l.roleId || null,
+        l.memberId || null,
+        l.label,
+        l.url,
+        l.status || 'Waiting'
+      )
+    );
+
     const insVideo = db.prepare('INSERT INTO video_links VALUES (?, ?, ?, ?, ?, ?, ?)');
-    project.videoLinks.forEach(l => insVideo.run(l.id, project.id, l.roleId || null, l.memberId || null, l.label, l.url, l.status || 'Waiting'));
+    (project.videoLinks || []).forEach((l) =>
+      insVideo.run(
+        l.id,
+        project.id,
+        l.roleId || null,
+        l.memberId || null,
+        l.label,
+        l.url,
+        l.status || 'Waiting'
+      )
+    );
+
     const insMix = db.prepare('INSERT INTO latest_mixes VALUES (?, ?, ?, ?, ?, ?, ?)');
-    (project.latestMixes || []).forEach(m => insMix.run(m.id, project.id, m.label, m.url, m.status || 'For review', m.note || '', m.createdAt || new Date().toISOString().slice(0, 10)));
+    (project.latestMixes || []).forEach((m) =>
+      insMix.run(
+        m.id,
+        project.id,
+        m.label,
+        m.url,
+        m.status || 'For review',
+        m.note || '',
+        m.createdAt || new Date().toISOString().slice(0, 10)
+      )
+    );
+
     const insSection = db.prepare('INSERT INTO sections VALUES (?, ?, ?, ?, ?, ?, ?)');
-    project.sections.forEach((sec, i) => insSection.run(sec.id, project.id, sec.label, sec.difficulty, sec.note || '', sec.members || '', i));
+    (project.sections || []).forEach((sec, i) =>
+      insSection.run(
+        sec.id,
+        project.id,
+        sec.label,
+        sec.difficulty,
+        sec.note || '',
+        sec.members || '',
+        i
+      )
+    );
+
     const insFeedback = db.prepare('INSERT INTO feedback VALUES (?, ?, ?, ?, ?, ?, ?)');
-    project.feedback.forEach(f => insFeedback.run(f.id, project.id, f.author || '', f.memberId || null, f.role || '', f.message, f.createdAt || new Date().toLocaleString()));
+    (project.feedback || []).forEach((f) =>
+      insFeedback.run(
+        f.id,
+        project.id,
+        f.author || '',
+        f.memberId || null,
+        f.role || '',
+        f.message,
+        f.createdAt || new Date().toLocaleString()
+      )
+    );
   });
   tx();
-  return hydrateProject(db.prepare('SELECT id, title, artist, bpm, song_key as key, difficulty, drive_url as driveUrl FROM projects WHERE id = ?').get(project.id));
+  return getProject(project.id);
 }
 
+/** @returns {boolean} Whether a project row was deleted. */
 export function deleteProject(id) {
   const result = db.prepare('DELETE FROM projects WHERE id = ?').run(id);
   return result.changes > 0;
 }
 
+/**
+ * Delete a single row from a known child table.
+ * @returns {boolean} Whether a row was deleted.
+ */
 export function deleteProjectItem(table, projectId, itemId) {
-  const allowed = new Set(['members', 'references_tracks', 'roles', 'stem_links', 'video_links', 'latest_mixes', 'sections', 'feedback']);
-  if (!allowed.has(table)) throw new Error('Invalid table');
-  const result = db.prepare(`DELETE FROM ${table} WHERE project_id = ? AND id = ?`).run(projectId, itemId);
+  if (!CHILD_TABLES.includes(table)) throw new Error('Invalid table');
+  const result = db
+    .prepare(`DELETE FROM ${table} WHERE project_id = ? AND id = ?`)
+    .run(projectId, itemId);
   return result.changes > 0;
 }

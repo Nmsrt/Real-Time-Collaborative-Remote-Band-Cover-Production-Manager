@@ -41,6 +41,9 @@ Thumbs.db
 *.sqlite
 *.sqlite3
 *.db
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite-journal
 
 # ------------------------
 # Runtime / temp files
