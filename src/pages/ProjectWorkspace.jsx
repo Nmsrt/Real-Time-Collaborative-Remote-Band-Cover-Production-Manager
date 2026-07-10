@@ -13,7 +13,10 @@ import {
   Headphones,
   Plus,
   Trash2,
-  MoreHorizontal
+  MoreHorizontal,
+  Activity,
+  Music2,
+  Gauge
 } from 'lucide-react';
 
 import { Panel, MemberBadge, LinkStack } from '../components/ui';
@@ -99,9 +102,22 @@ export default function ProjectWorkspace({
             ← Back to library
           </button>
           <h1>{project.title}</h1>
-          <p>
-            {project.artist} · {project.bpm} BPM · Key of {project.key} · {project.difficulty}
-          </p>
+          <p className="workspace-artist">{project.artist}</p>
+
+          <div className="meta-chips">
+            <span className="meta-chip">
+              <Activity size={14} />
+              {project.bpm} BPM
+            </span>
+            <span className="meta-chip">
+              <Music2 size={14} />
+              Key of {project.key}
+            </span>
+            <span className="meta-chip">
+              <Gauge size={14} />
+              {project.difficulty}
+            </span>
+          </div>
 
           <div className="hero-actions">
             {project.driveUrl && (
