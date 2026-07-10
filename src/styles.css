@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500;1,9..144,600&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,500;1,9..144,600&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap');
 
 /* ==========================================================================
    Design tokens
@@ -67,40 +67,41 @@
    --------------------------------------------------------------------------- */
 :root,
 .app-shell.light-theme {
-  --bg: #f1ead9;
-  --surface: #faf6ec;
-  --surface-soft: #e9e0cb;
-  --text: #211c14;
-  --muted: #7a705c;
-  --line: #d9cca9;
-  --border: #d9cca9;
+  --color-scheme: light;
+  --bg: #eceef1;
+  --surface: #f8f9fb;
+  --surface-soft: #e2e5ea;
+  --text: #15171c;
+  --muted: #62666f;
+  --line: #d3d7dd;
+  --border: #d3d7dd;
 
   /* Accent doubles as the primary action color and accent text. */
   --accent: #5b3fa6;
   --accent-dark: #452f80;
   --on-primary: #f8f4ff; /* text/icon color on a --accent filled button */
 
-  --chip-bg: #faf6ec;
-  --input-bg: #fbf8f0;
-  --nav-hover: #e6dabd;
+  --chip-bg: #f8f9fb;
+  --input-bg: #ffffff;
+  --nav-hover: #dde1e7;
 
   /* Semantic colors (bg / border / foreground) — each pair meets WCAG AA. */
-  --success-bg: #e7f2e1;
-  --success-bd: #9dc78a;
-  --success-fg: #29601e;
+  --success-bg: #e2f2e1;
+  --success-bd: #92c78a;
+  --success-fg: #216017;
   --warning-bg: #fbeed9;
   --warning-bd: #e3a856;
   --warning-fg: #8a4c0a;
-  --error-bg: #f8e2dd;
+  --error-bg: #f8e2df;
   --error-bd: #dd8f7e;
   --error-fg: #942e17;
-  --neutral-bg: #ece5d4;
-  --neutral-bd: #cabf9f;
-  --neutral-fg: #5c5340;
-  --progress: #4c7a3c;
+  --neutral-bg: #e6e8ec;
+  --neutral-bd: #c0c4cc;
+  --neutral-fg: #4c4f57;
+  --progress: #3c6a2e;
 
-  --shadow: 0 10px 26px rgba(60, 41, 15, 0.1);
-  --shadow-hover: 0 16px 38px rgba(60, 41, 15, 0.16);
+  --shadow: 0 10px 26px rgba(20, 22, 30, 0.09);
+  --shadow-hover: 0 16px 38px rgba(20, 22, 30, 0.15);
   --focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 32%, transparent);
 }
 
@@ -110,6 +111,7 @@
    keeps the accent out of the way of the green "Submitted" status pill it
    used to be identical to. ------------------------------------------------- */
 .app-shell.dark-theme {
+  --color-scheme: dark;
   --bg: #0c0d0a;
   --surface: #15160f;
   --surface-soft: #1d1f16;
@@ -159,6 +161,7 @@ body {
   margin: 0;
   font-family: var(--font-sans);
   font-size: var(--text-base);
+  font-weight: var(--fw-semibold);
   color: var(--text);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
@@ -332,11 +335,11 @@ button:focus-visible {
 .page-header h1 {
   margin: 0;
   font-family: var(--font-display);
-  font-style: italic;
-  font-weight: var(--fw-semibold);
+  font-style: normal;
+  font-weight: var(--fw-black);
   font-size: clamp(26px, 3vw, 40px);
-  letter-spacing: -0.01em;
-  line-height: 1.08;
+  letter-spacing: -0.03em;
+  line-height: 1.02;
 }
 
 .eyebrow {
@@ -583,22 +586,6 @@ button:focus-visible {
   border-bottom-color: var(--accent);
 }
 
-.tab-count {
-  min-width: 20px;
-  padding: 1px var(--space-1);
-  border-radius: var(--radius-pill);
-  background: var(--surface-soft);
-  color: var(--muted);
-  font-size: 10px;
-  font-weight: var(--fw-black);
-  text-align: center;
-}
-
-.tab-btn.active .tab-count {
-  background: color-mix(in srgb, var(--accent) 16%, transparent);
-  color: var(--accent);
-}
-
 /* ==========================================================================
    Buttons
    ========================================================================== */
@@ -711,6 +698,25 @@ button:focus-visible {
   min-width: 0;
 }
 
+/* Structure & References share a tab, laid out as two panels side by side
+   instead of stacked, so both are visible without switching tabs. */
+.split-panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.split-panels .panel {
+  min-width: 0;
+}
+
+@media (max-width: 860px) {
+  .split-panels {
+    grid-template-columns: 1fr;
+  }
+}
+
 .panel {
   padding: var(--space-5);
 }
@@ -747,9 +753,13 @@ button:focus-visible {
 /* ==========================================================================
    Reference cards
    ========================================================================== */
+/* auto-fit sizes columns off the grid's own width, not the viewport — it
+   now lives in .split-panels sharing half the workspace, so a fixed
+   viewport-keyed column count would cram cards regardless of how much
+   room this particular panel actually has. */
 .reference-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: var(--space-3);
 }
 
@@ -774,6 +784,18 @@ button:focus-visible {
 .reference-card a {
   display: grid;
   gap: var(--space-2);
+}
+
+/* YouTube auto-thumbnail (img.youtube.com/vi/<id>/hqdefault.jpg — no API
+   key needed). Pulled to the card's edges so it reads as cover art, not
+   an inset image. */
+.reference-thumb {
+  width: calc(100% + 2 * var(--space-4));
+  margin: calc(var(--space-4) * -1) calc(var(--space-4) * -1) 0;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  background: var(--surface);
 }
 
 .reference-card span {
@@ -909,10 +931,21 @@ textarea {
     box-shadow var(--transition-fast);
 }
 
-/* The native dropdown arrow sits flush against the browser's own inset;
-   a bit of extra right padding keeps it from crowding the border. */
+/* Native arrow position isn't reliably controllable via padding across
+   browsers/OSes, so we replace it with a custom SVG arrow whose position
+   we set directly (shifted left of the box edge). */
 select {
-  padding-right: calc(var(--space-3) + var(--space-3));
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23888888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right calc(var(--space-3) + var(--space-2)) center;
+  background-size: 10px 6px;
+  padding-right: calc(var(--space-3) + var(--space-4));
+  /* Lets the browser pick correct default popup chrome (scrollbar, base
+     option colors) per theme — every select goes through this rule, so
+     this is the one place to set it rather than per-component. */
+  color-scheme: var(--color-scheme, light);
 }
 
 select:focus,
@@ -1002,8 +1035,14 @@ textarea {
    be handed to someone else without deleting and recreating the row. */
 .member-select select {
   border: 0;
-  background: transparent;
-  padding: 0;
+  background-color: transparent;
+  /* The base `select` rule reserves padding-right for its arrow at a fixed
+     offset; this control is much narrower, so that offset needs its own
+     (smaller) clearance instead of the zero padding used to have — with no
+     padding the arrow painted straight over the member name. */
+  padding: 0 14px 0 0;
+  background-position: right center;
+  background-size: 9px 5px;
   margin: 0;
   width: auto;
   max-width: 120px;
@@ -1011,6 +1050,12 @@ textarea {
   font: inherit;
   font-weight: inherit;
   cursor: pointer;
+}
+
+.member-select select option {
+  background-color: var(--input-bg);
+  color: var(--text);
+  font-weight: var(--fw-extrabold);
 }
 
 .member-select select:focus-visible {
@@ -1021,7 +1066,8 @@ textarea {
 
 .member-list {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-start;
   gap: var(--space-3);
 }
 
@@ -1293,8 +1339,168 @@ textarea {
 }
 
 .form-grid .full,
-.form-actions {
+.form-actions,
+.bpm-field,
+.difficulty-field {
   grid-column: 1 / -1;
+}
+
+.difficulty-field {
+  display: grid;
+  gap: var(--space-2);
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-black);
+}
+
+/* ---- BPM tap-tempo slider ------------------------------------------------
+   A dot that beats at the current tempo turns an abstract number into
+   something you can feel is right before saving. Tap tempo lets you set it
+   by ear/rhythm instead of dragging blind. */
+.bpm-control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.bpm-control input[type='range'] {
+  flex: 1;
+  width: auto;
+  border: none;
+  padding: 0;
+  background: none;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.bpm-pulse {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent);
+  animation: bpm-beat infinite;
+}
+
+.bpm-pulse.flash {
+  background: var(--accent-dark);
+}
+
+@keyframes bpm-beat {
+  0% {
+    transform: scale(1);
+  }
+  15% {
+    transform: scale(1.5);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.bpm-readout {
+  font-family: var(--font-sans);
+  font-size: var(--text-xl);
+  font-weight: var(--fw-black);
+  color: var(--text);
+  min-width: 2.5ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.bpm-tap {
+  white-space: nowrap;
+  padding: var(--space-2) var(--space-3);
+}
+
+/* ---- Difficulty chips ----------------------------------------------------
+   Tactile alternative to a <select> — pick by feel, see the whole set at a
+   glance instead of opening a dropdown for a 3-option choice. */
+.difficulty-chips {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.difficulty-chip {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  background: var(--surface-soft);
+  color: var(--text);
+  font-weight: var(--fw-extrabold);
+  cursor: pointer;
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.difficulty-chip:hover {
+  transform: translateY(-1px);
+}
+
+.difficulty-chip.active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface-soft));
+  color: var(--accent);
+}
+
+/* ==========================================================================
+   Settings page
+   ========================================================================== */
+.settings-row-label {
+  margin: 0 0 var(--space-2);
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-black);
+}
+
+.theme-choice {
+  display: flex;
+  gap: var(--space-2);
+  max-width: 280px;
+}
+
+.theme-choice .difficulty-chip {
+  flex: 1;
+}
+
+/* ==========================================================================
+   Help page
+   ========================================================================== */
+.help-topics {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.help-topic {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.help-topic svg {
+  flex: 0 0 auto;
+  color: var(--accent);
+  margin-top: 2px;
+}
+
+.help-topic h3 {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-md);
+}
+
+.help-topic p {
+  margin: 0;
+  color: var(--muted);
+  font-weight: var(--fw-extrabold);
+  line-height: var(--leading-normal);
 }
 
 .form-actions {
@@ -1580,9 +1786,7 @@ textarea {
   .feedback-item .ghost-btn,
   .feedback-item > small,
   .mix-row .mix-actions .ghost-btn,
-  .mix-row > div > small,
-  .section-row .move-buttons button:last-child,
-  .section-body small {
+  .section-row .move-buttons button:last-child {
     opacity: 0;
     transition: opacity var(--transition-fast);
   }
@@ -1599,12 +1803,8 @@ textarea {
   .feedback-item:focus-within > small,
   .mix-row:hover .mix-actions .ghost-btn,
   .mix-row:focus-within .mix-actions .ghost-btn,
-  .mix-row:hover > div > small,
-  .mix-row:focus-within > div > small,
   .section-row:hover .move-buttons button:last-child,
-  .section-row:focus-within .move-buttons button:last-child,
-  .section-row:hover .section-body small,
-  .section-row:focus-within .section-body small {
+  .section-row:focus-within .move-buttons button:last-child {
     opacity: 1;
   }
 }
@@ -1676,9 +1876,6 @@ textarea {
 @media (max-width: 1180px) {
   .workspace-hero {
     grid-template-columns: 1fr;
-  }
-  .reference-grid {
-    grid-template-columns: repeat(2, 1fr);
   }
 }
 

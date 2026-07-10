@@ -3,6 +3,8 @@ import { Menu, Music, Sun, Moon } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import ProjectLibrary from './pages/ProjectLibrary';
 import ProjectWorkspace from './pages/ProjectWorkspace';
+import Settings from './pages/Settings';
+import Help from './pages/Help';
 import ModalController from './modals/ModalController';
 import {
   createProjectApi,
@@ -230,7 +232,6 @@ export default function App() {
       <Sidebar
         page={page}
         setPage={setPage}
-        openCreate={() => setModal({ type: 'project' })}
         open={navOpen}
         onClose={closeNav}
         theme={theme}
@@ -281,6 +282,10 @@ export default function App() {
             openModal={setModal}
           />
         )}
+        {!loading && page === 'settings' && (
+          <Settings theme={theme} onToggleTheme={toggleTheme} />
+        )}
+        {!loading && page === 'help' && <Help />}
         {!loading && page === 'project' && !selectedProject && (
           <section className="panel empty-state">
             <h2>No project selected</h2>

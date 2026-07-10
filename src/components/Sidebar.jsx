@@ -1,5 +1,5 @@
 import React from 'react';
-import { Library, Plus, Music, X } from 'lucide-react';
+import { Library, Music, X, Settings, HelpCircle } from 'lucide-react';
 
 /**
  * Primary navigation. On desktop it is a fixed column; on mobile it becomes an
@@ -8,21 +8,12 @@ import { Library, Plus, Music, X } from 'lucide-react';
  * @param {Object} props
  * @param {string} props.page - Active page key.
  * @param {(page: string) => void} props.setPage
- * @param {() => void} props.openCreate
  * @param {boolean} props.open - Whether the mobile drawer is visible.
  * @param {() => void} props.onClose - Close the mobile drawer.
  * @param {string} props.theme - 'light' | 'dark'.
  * @param {() => void} props.onToggleTheme
  */
-export default function Sidebar({
-  page,
-  setPage,
-  openCreate,
-  open,
-  onClose,
-  theme,
-  onToggleTheme
-}) {
+export default function Sidebar({ page, setPage, open, onClose, theme, onToggleTheme }) {
   const isLibraryActive = page === 'library' || page === 'project';
 
   // Run a nav action, then dismiss the drawer so the chosen page is visible.
@@ -65,8 +56,17 @@ export default function Sidebar({
         >
           <Library size={16} /> Project Library
         </button>
-        <button onClick={navigate(openCreate)}>
-          <Plus size={16} /> Create Project
+        <button
+          className={page === 'settings' ? 'active' : ''}
+          onClick={navigate(() => setPage('settings'))}
+        >
+          <Settings size={16} /> Settings
+        </button>
+        <button
+          className={page === 'help' ? 'active' : ''}
+          onClick={navigate(() => setPage('help'))}
+        >
+          <HelpCircle size={16} /> Help
         </button>
       </nav>
 

@@ -1,12 +1,29 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { uid } from '../utils/ids';
+import { fetchYoutubeTitle } from '../utils/youtube';
 import { KEY_OPTIONS, DIFFICULTY_OPTIONS, ROLE_STATUSES } from '../constants';
+
+/** Slider range for the BPM picker — also the single source of truth for its clamp/default. */
+const BPM_MIN = 40;
+const BPM_MAX = 220;
+const BPM_DEFAULT = 120;
+
+function clampBpm(n) {
+  return Math.min(BPM_MAX, Math.max(BPM_MIN, n));
+}
 
 /** Empty form state for each modal type. */
 const blank = {
-  project: { title: '', artist: '', bpm: '', key: '', difficulty: 'Medium', driveUrl: '' },
-  projectEdit: { title: '', artist: '', bpm: '', key: '', difficulty: 'Medium', driveUrl: '' },
+  project: { title: '', artist: '', bpm: BPM_DEFAULT, key: '', difficulty: 'Medium', driveUrl: '' },
+  projectEdit: {
+    title: '',
+    artist: '',
+    bpm: BPM_DEFAULT,
+    key: '',
+    difficulty: 'Medium',
+    driveUrl: ''
+  },
   member: { name: '', color: '#2458ad' },
   reference: { title: '', note: '', url: '' },
   role: { role: '', memberId: '', deadline: '', status: 'Not started', note: '' },
@@ -53,7 +70,8 @@ export default function ModalController({ modal, close, createProject, project, 
   if (modal.type === 'projectEdit' && project) {
     initial.title = project.title || '';
     initial.artist = project.artist || '';
-    initial.bpm = project.bpm || '';
+    const numericBpm = Number(project.bpm);
+    initial.bpm = Number.isFinite(numericBpm) ? clampBpm(numericBpm) : BPM_DEFAULT;
     initial.key = project.key || '';
     initial.difficulty = project.difficulty || 'Medium';
     initial.driveUrl = project.driveUrl || '';
@@ -64,6 +82,13 @@ export default function ModalController({ modal, close, createProject, project, 
   }
 
   const [form, setForm] = useState(initial);
+  const [saving, setSaving] = useState(false);
+  // The slider always shows *some* number even when the stored bpm is the
+  // unset sentinel ('---') or old free-text (e.g. "Fast"). Only overwrite
+  // the stored value if the user actually moved the slider/tapped tempo —
+  // otherwise an untouched "just fixing the title" edit would silently
+  // clobber it with the display default.
+  const [bpmTouched, setBpmTouched] = useState(false);
 
   function set(field, value) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -74,7 +99,7 @@ export default function ModalController({ modal, close, createProject, project, 
     close();
   }
 
-  function submit(e) {
+  async function submit(e) {
     e.preventDefault();
     if (modal.type === 'project') return createProject(form);
     if (!project) return;
@@ -84,7 +109,7 @@ export default function ModalController({ modal, close, createProject, project, 
         ...p,
         title: form.title,
         artist: form.artist || 'Artist TBD',
-        bpm: form.bpm || '---',
+        bpm: bpmTouched ? clampBpm(form.bpm) : project.bpm,
         key: form.key || '---',
         difficulty: form.difficulty || 'Medium',
         driveUrl: form.driveUrl || ''
@@ -92,8 +117,17 @@ export default function ModalController({ modal, close, createProject, project, 
       return close();
     }
 
+    if (modal.type === 'reference') {
+      let title = form.title.trim();
+      if (!title) {
+        setSaving(true);
+        title = (await fetchYoutubeTitle(form.url)) || 'Untitled reference';
+        setSaving(false);
+      }
+      return addToProject('references', { id: uid('ref'), ...form, title });
+    }
+
     if (modal.type === 'member') return addToProject('members', { id: uid('member'), ...form });
-    if (modal.type === 'reference') return addToProject('references', { id: uid('ref'), ...form });
     if (modal.type === 'role') return addToProject('roles', { id: uid('role'), ...form });
     if (modal.type === 'stemLink') return addToProject('stemLinks', { id: uid('stem'), ...form });
     if (modal.type === 'videoLink')
@@ -134,7 +168,13 @@ export default function ModalController({ modal, close, createProject, project, 
               required
             />
             <Field label="Artist" value={form.artist} onChange={(v) => set('artist', v)} />
-            <Field label="BPM" value={form.bpm} onChange={(v) => set('bpm', v)} />
+            <BpmSlider
+              value={form.bpm}
+              onChange={(v) => {
+                setBpmTouched(true);
+                set('bpm', v);
+              }}
+            />
             <Select
               label="Key"
               value={form.key}
@@ -142,12 +182,7 @@ export default function ModalController({ modal, close, createProject, project, 
               options={KEY_OPTIONS}
               placeholder="Select key"
             />
-            <Select
-              label="Difficulty"
-              value={form.difficulty}
-              onChange={(v) => set('difficulty', v)}
-              options={DIFFICULTY_OPTIONS}
-            />
+            <DifficultyPicker value={form.difficulty} onChange={(v) => set('difficulty', v)} />
             <Field
               label="Google Drive URL"
               value={form.driveUrl}
@@ -183,7 +218,11 @@ export default function ModalController({ modal, close, createProject, project, 
 
         {modal.type === 'reference' && (
           <div className="form-grid">
-            <Field label="Title" value={form.title} onChange={(v) => set('title', v)} required />
+            <Field
+              label="Title (leave blank to use the YouTube title)"
+              value={form.title}
+              onChange={(v) => set('title', v)}
+            />
             <Field label="URL" value={form.url} onChange={(v) => set('url', v)} />
             <TextArea label="Note" value={form.note} onChange={(v) => set('note', v)} />
           </div>
@@ -304,8 +343,8 @@ export default function ModalController({ modal, close, createProject, project, 
           <button type="button" className="secondary-btn" onClick={close}>
             Cancel
           </button>
-          <button type="submit" className="primary-btn">
-            Save
+          <button type="submit" className="primary-btn" disabled={saving}>
+            {saving ? 'Saving…' : 'Save'}
           </button>
         </div>
       </form>
@@ -355,5 +394,76 @@ function Select({ label, value, onChange, options, placeholder }) {
         )}
       </select>
     </label>
+  );
+}
+
+/**
+ * BPM picker: a slider for coarse dragging plus a tap-tempo button for
+ * setting it by feel — clicks in rhythm, we average the intervals. A dot
+ * pulses at the current tempo so the number means something before you've
+ * even hit save.
+ */
+function BpmSlider({ value, onChange }) {
+  const bpm = Number.isFinite(Number(value)) ? clampBpm(Number(value)) : BPM_DEFAULT;
+  const tapsRef = useRef([]);
+  const [tapFlash, setTapFlash] = useState(false);
+
+  function tap() {
+    const now = Date.now();
+    const recent = tapsRef.current.filter((t) => now - t < 2000);
+    recent.push(now);
+    tapsRef.current = recent;
+
+    setTapFlash(true);
+    setTimeout(() => setTapFlash(false), 100);
+
+    if (recent.length >= 2) {
+      const intervals = recent.slice(1).map((t, i) => t - recent[i]);
+      const avgMs = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+      onChange(clampBpm(Math.round(60000 / avgMs)));
+    }
+  }
+
+  return (
+    <label className="bpm-field">
+      BPM
+      <div className="bpm-control">
+        <span className={`bpm-pulse ${tapFlash ? 'flash' : ''}`} style={{ animationDuration: `${60000 / bpm}ms` }} />
+        <input
+          type="range"
+          min={BPM_MIN}
+          max={BPM_MAX}
+          value={bpm}
+          onChange={(e) => onChange(Number(e.target.value))}
+        />
+        <b className="bpm-readout">{bpm}</b>
+        <button type="button" className="secondary-btn bpm-tap" onClick={tap}>
+          Tap tempo
+        </button>
+      </div>
+    </label>
+  );
+}
+
+/** Difficulty as tactile chips instead of a dropdown — pick by feel, see it at a glance. */
+const DIFFICULTY_EMOJI = { Easy: '🟢', Medium: '🟡', Hard: '🔴' };
+
+function DifficultyPicker({ value, onChange }) {
+  return (
+    <div className="difficulty-field">
+      Difficulty
+      <div className="difficulty-chips">
+        {DIFFICULTY_OPTIONS.map((option) => (
+          <button
+            type="button"
+            key={option}
+            className={`difficulty-chip ${value === option ? 'active' : ''}`}
+            onClick={() => onChange(option)}
+          >
+            <span>{DIFFICULTY_EMOJI[option]}</span> {option}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }

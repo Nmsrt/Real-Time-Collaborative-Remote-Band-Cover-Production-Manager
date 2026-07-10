@@ -18,6 +18,7 @@ import {
 
 import { Panel, MemberBadge, LinkStack } from '../components/ui';
 import { ROLE_STATUSES } from '../constants';
+import { youtubeId } from '../utils/youtube';
 
 /** Dot color per role status — the select itself stays neutral. */
 const STATUS_DOT = {
@@ -56,17 +57,11 @@ export default function ProjectWorkspace({
 
   const [activeTab, setActiveTab] = useState('assignments');
   const tabs = [
-    { key: 'assignments', label: 'Assignments', icon: <Upload />, count: project.roles.length },
-    { key: 'references', label: 'Reference Tracks', icon: <LinkIcon />, count: project.references.length },
-    {
-      key: 'drafts',
-      label: 'Track Drafts',
-      icon: <Headphones />,
-      count: (project.latestMixes || []).length
-    },
-    { key: 'structure', label: 'Song Structure', icon: <ListMusic />, count: project.sections.length },
-    { key: 'members', label: 'Members', icon: <Users />, count: project.members.length },
-    { key: 'notes', label: 'Notes', icon: <MessageSquare />, count: project.feedback.length }
+    { key: 'assignments', label: 'Assignments', icon: <Upload /> },
+    { key: 'structure', label: 'Structure & References', icon: <ListMusic /> },
+    { key: 'drafts', label: 'Track Drafts', icon: <Headphones /> },
+    { key: 'members', label: 'Members', icon: <Users /> },
+    { key: 'notes', label: 'Notes', icon: <MessageSquare /> }
   ];
 
   function updateRole(id, field, value) {
@@ -156,45 +151,11 @@ export default function ProjectWorkspace({
           >
             {React.cloneElement(tab.icon, { size: 15 })}
             {tab.label}
-            <span className="tab-count">{tab.count}</span>
           </button>
         ))}
       </div>
 
       <div className="workspace-panel-slot">
-          {activeTab === 'references' && (
-            <Panel
-              title="Reference Tracks"
-              icon={<LinkIcon />}
-              action={
-                <button className="small-btn" onClick={() => openModal({ type: 'reference' })}>
-                  Add reference
-                </button>
-              }
-            >
-              <div className="reference-grid">
-                {project.references.length === 0 && (
-                  <p className="empty-panel">No reference tracks yet.</p>
-                )}
-                {project.references.map((ref) => (
-                  <div className="reference-card" key={ref.id}>
-                    <button
-                      className="ref-delete"
-                      onClick={() => removeItem('references', ref.id)}
-                    >
-                      <X size={12} />
-                    </button>
-
-                    <a href={ref.url || '#'} target="_blank" rel="noreferrer">
-                      <strong>{ref.title}</strong>
-                      <span>{ref.note}</span>
-                    </a>
-                  </div>
-                ))}
-              </div>
-            </Panel>
-          )}
-
           {activeTab === 'assignments' && (
             <Panel
               title="Assignments"
@@ -371,42 +332,86 @@ export default function ProjectWorkspace({
           )}
 
           {activeTab === 'structure' && (
-            <Panel
-              title="Song Structure"
-              icon={<ListMusic />}
-              action={
-                <button className="small-btn" onClick={() => openModal({ type: 'section' })}>
-                  Add section
-                </button>
-              }
-            >
-              <div className="structure-list">
-                {project.sections.length === 0 && <p className="empty-panel">No sections yet.</p>}
-                {project.sections.map((section, index) => (
-                  <article className="section-row" key={section.id}>
-                    <GripVertical size={18} />
-                    <div className="section-index">{String(index + 1).padStart(2, '0')}</div>
-                    <div className="section-body">
-                      <span>{section.difficulty}</span>
-                      <h3>{section.label}</h3>
-                      <p>{section.note}</p>
-                      <small>{section.members}</small>
-                    </div>
-                    <div className="move-buttons">
-                      <button onClick={() => moveSection(index, -1)}>
-                        <ArrowUp size={15} />
-                      </button>
-                      <button onClick={() => moveSection(index, 1)}>
-                        <ArrowDown size={15} />
-                      </button>
-                      <button onClick={() => removeItem('sections', section.id)}>
-                        <X size={15} />
-                      </button>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </Panel>
+            <div className="split-panels">
+              <Panel
+                title="Song Structure"
+                icon={<ListMusic />}
+                action={
+                  <button className="small-btn" onClick={() => openModal({ type: 'section' })}>
+                    Add section
+                  </button>
+                }
+              >
+                <div className="structure-list">
+                  {project.sections.length === 0 && <p className="empty-panel">No sections yet.</p>}
+                  {project.sections.map((section, index) => (
+                    <article className="section-row" key={section.id}>
+                      <GripVertical size={18} />
+                      <div className="section-index">{String(index + 1).padStart(2, '0')}</div>
+                      <div className="section-body">
+                        <span>{section.difficulty}</span>
+                        <h3>{section.label}</h3>
+                        <p>{section.note}</p>
+                        <small>{section.members}</small>
+                      </div>
+                      <div className="move-buttons">
+                        <button onClick={() => moveSection(index, -1)}>
+                          <ArrowUp size={15} />
+                        </button>
+                        <button onClick={() => moveSection(index, 1)}>
+                          <ArrowDown size={15} />
+                        </button>
+                        <button onClick={() => removeItem('sections', section.id)}>
+                          <X size={15} />
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </Panel>
+
+              <Panel
+                title="Reference Tracks"
+                icon={<LinkIcon />}
+                action={
+                  <button className="small-btn" onClick={() => openModal({ type: 'reference' })}>
+                    Add reference
+                  </button>
+                }
+              >
+                <div className="reference-grid">
+                  {project.references.length === 0 && (
+                    <p className="empty-panel">No reference tracks yet.</p>
+                  )}
+                  {project.references.map((ref) => {
+                    const ytId = youtubeId(ref.url);
+                    return (
+                      <div className="reference-card" key={ref.id}>
+                        <button
+                          className="ref-delete"
+                          onClick={() => removeItem('references', ref.id)}
+                        >
+                          <X size={12} />
+                        </button>
+
+                        <a href={ref.url || '#'} target="_blank" rel="noreferrer">
+                          {ytId && (
+                            <img
+                              className="reference-thumb"
+                              src={`https://img.youtube.com/vi/${ytId}/hqdefault.jpg`}
+                              alt=""
+                              loading="lazy"
+                            />
+                          )}
+                          <strong>{ref.title}</strong>
+                          <span>{ref.note}</span>
+                        </a>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Panel>
+            </div>
           )}
 
           {activeTab === 'members' && (
